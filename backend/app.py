@@ -5,8 +5,10 @@ from events import create_event
 from database import get_connection
 import json
 from datetime import datetime
-app = Flask(__name__)
+from event_validation import validate_event
+from kafka_client import send_event
 
+app = Flask(__name__)
 
 @app.route("/api/health", methods=["GET"])
 def health():
@@ -37,12 +39,16 @@ def test_logs():
 
 @app.route("/api/save-event")
 def save_event():
-    event = create_event(
-        "SESSION-101",
-        "TAB_SWITCH",
-        {"message": "Candidate switched browser tab"}
-    )
+    session_id = "SESSION-101"
+    event_type = "TAB_SWITCH"
+    details = {"message": "Candidate switched browser tab"}
 
+    valid, message = validate_event(session_id, event_type, details)
+
+    if not valid:
+        return {"error": message}, 400
+
+    event = create_event(session_id, event_type, details)
     connection = get_connection()
 
     try:
@@ -55,13 +61,16 @@ def save_event():
                 event["event_id"],
                 event["session_id"],
                 event["event_type"],
-                datetime.fromisoformat(
-                    event["timestamp"]
-                ).replace(tzinfo=None),
+                datetime.fromisoformat(event["timestamp"]).replace(tzinfo=None),
                 json.dumps(event["details"])
             )
         )
         connection.commit()
+        try:
+            send_event(event)
+            logger.info("Event sent to Kafka: %s", event["event_id"])
+        except Exception:
+            logger.exception("Failed to send event to Kafka")
         logger.info("Event saved: %s", event["event_id"])
         return {"message": "Event saved successfully", "event": event}, 201
 
