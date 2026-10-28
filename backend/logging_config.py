@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 
 # Create a folder for application logs
-LOG_DIR = Path("logs")
+LOG_DIR = Path(__file__).parent / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 
 # Store logs in a file
