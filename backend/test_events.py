@@ -1,15 +1,8 @@
-from events import create_event
+from event_validation import validate_event
 
-event = create_event(
-    "SESSION-101",
-    "TAB_SWITCH",
-    {"message": "Candidate switched browser tab"}
-)
+assert validate_event("", "TAB_SWITCH", {})[0] is False
+assert validate_event("SESSION-101", "", {})[0] is False
+assert validate_event("SESSION-101", "TAB_SWITCH", "invalid")[0] is False
+assert validate_event("SESSION-101", "TAB_SWITCH", {})[0] is True
 
-assert event["event_id"]
-assert event["session_id"] == "SESSION-101"
-assert event["event_type"] == "TAB_SWITCH"
-assert event["timestamp"]
-assert isinstance(event["details"], dict)
-
-print("All event tests passed!")
+print("All validation tests passed!")
